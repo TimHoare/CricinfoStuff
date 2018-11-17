@@ -107,7 +107,18 @@ Tests$Type <- str_replace(Tests$Type, "runs", "Runs")
 Tests$Type <- str_replace(Tests$Type, "wickets", "Wickets")
 ```
 
-The final challenge is to separate, reformate and parse the date column into a start date, and an end date. 
+The final challenge is to separate, reformate and parse the date column into a start date, and an end date. As mentioned earlier, the difficulty is dealing with the multiple date formats in this column. The method I have used here is to split the column into 6 parts: the day, month and year of the start and end date. 
+
+The one consistency in all rows is they all start with the start month and all end with the a year (the start and end year in most cases), so we can start by spliting into 3 columns: StartMonth, Rest of date (RoD) and StartYear.
+
+```r
+Tests %>%
+  separate(MatchDate, c("StartMonth", "RoD"), sep = " ", extra = "merge") %>%
+  separate(RoD, c("RoD", "StartYear"), sep = ", ", extra = "merge")
+```
+Separate is expecting only two parts here because we have only specified a character vector of length 2, so an additional argument - extra = "merge" is required to say we only want to split on the first delimiter. This is what we get from the first 2 splits:
+
+
 
   
   
