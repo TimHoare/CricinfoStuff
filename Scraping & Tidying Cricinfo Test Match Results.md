@@ -106,18 +106,34 @@ Tests$Winner <- str_replace(Tests$Winner, "tied", "Tied")
 Tests$Type <- str_replace(Tests$Type, "runs", "Runs")
 Tests$Type <- str_replace(Tests$Type, "wickets", "Wickets")
 ```
+We are now at this point:
 
-The final challenge is to separate, reformate and parse the date column into a start date, and an end date. As mentioned earlier, the difficulty is dealing with the multiple date formats in this column. The method I have used here is to split the column into 6 parts: the day, month and year of the start and end date. 
+![](https://github.com/TimHoare/CricinfoStuff/blob/master/cricinfogithubimg1.png)
 
-The one consistency in all rows is they all start with the start month and all end with the a year (the start and end year in most cases), so we can start by spliting into 3 columns: StartMonth, Rest of date (RoD) and StartYear.
+The final challenge is to separate, reformat and parse the date column into a start date, and an end date. As mentioned earlier, the difficulty is dealing with the multiple date formats in this column. The method I have used here is to split the column into 6 parts: the day, month and year of the start and end date. 
 
+Next follows quite a long pipe-chain of separates where I try to split the MatchDate column into as many new columns as possible. A comment is included under each to explain what is happening. The argument extra = "merge" ensures only the column is only split on the first occurence of the delimiter.
 ```r
-Tests %>%
+Tests <- Tests %>%
   separate(MatchDate, c("StartMonth", "RoD"), sep = " ", extra = "merge") %>%
-  separate(RoD, c("RoD", "StartYear"), sep = ", ", extra = "merge")
+  #Split on the first space. Start (and end in most cases) month on the right, rest of date (RoD) on the left
+  
+  separate(RoD, c("RoD", "StartYear"), sep = ", ", extra = "merge") %>%
+  #Split RoD on the first comma-space. Year is now on the far right and the rest in the middle
+  
+  separate(StartYear, c("StartYear", "YearWrap"), sep = " - ", extra = "merge") %>%
+  #New year column split to move matches that span 2 years
+  #The next 2 lines split those dates into 3
+  
+  separate(YearWrap, c("EndMonth", "Rest"), sep = " ", extra = "merge") %>%
+  separate(Rest, c("EndDay", "EndYear"), sep = ", ", extra = "merge") %>% 
+ 
+  separate(RoD, c("StartDay", "RoD"), sep = "-", extra = "merge")
+  #Finally, we can return to our RoD column and get a start date column
 ```
-Separate is expecting only two parts here because we have only specified a character vector of length 2, so an additional argument - extra = "merge" is required to say we only want to split on the first delimiter. This is what we get from the first 2 splits:
+Our data now looks like this:
 
+![](https://github.com/TimHoare/CricinfoStuff/blob/master/cricinfogithubimg2.png)
 
 
   
