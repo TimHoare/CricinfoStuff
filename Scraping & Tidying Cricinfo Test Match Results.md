@@ -5,6 +5,8 @@ Background
 
 ESPNcricinfo is an online cricket news site, which covers matches all around the world live, and keeps a database of historical results and stats dating back to the 19th century. On its website, cricinfo stores the results and scorecard of every international cricket match ever (as far as i'm aware). A task I set for myself was to scrape out the results of all test matches (2325 at the time of writing this) into a a single data frame and manipulate the data into a tidy format. Cricinfo stores all test matches on their test match records [page](http://stats.espncricinfo.com/ci/engine/records/index.html?class=1) by year so the task is to obtain the urls for each year from the by year [page](http://stats.espncricinfo.com/ci/content/records/307847.html) and scrape out the relevant information as text.
 
+Disclaimer: I don't profess to being anything close to an expert on this stuff and I am always tring to learn so my methods are more than likely sub-optimal. If you don't care about the code and just want the data it can be found [here](https://github.com/TimHoare/CricinfoStuff/blob/master/TestsProcessed.csv).
+
 Step 1 - Scraping 
 ----------
 
@@ -135,8 +137,67 @@ Our data now looks like this:
 
 ![](https://github.com/TimHoare/CricinfoStuff/blob/master/cricinfogithubimg2.png)
 
+What's left to do is to populate end date columns where there are currently NAs. We can use a similar if_else to earlier to conditionally copy the start year accross
 
+```r
+TempTest$EndYear <- if_else(is.na(TempTest$EndYear), TempTest$StartYear, TempTest$EndYear)
+```
+Now we use a similar method to earlier to remove the month from RoD for those matches span 2 months. To detect the string I want to extract, I am using the rebus package to look for a string that starts with 3 word characters. 
+
+```r
+#Create a temporary column and fill with NAs
+Tests$Temp <- NA
+
+#Find rows in RoD which contain a month and a day and copy to new column
+Tests$Temp <- str_extract(Tests$RoD, pattern = START %R% WRD %R% WRD %R% WRD)
   
+#Remove them from RoD, including the space this time
+Tests$RoD <- str_remove(Tests$RoD, pattern = START %R% WRD %R% WRD %R% WRD %R% SPC)
+```
+A few more if_else's to move everything to the right column:
+```r
+#Move date parts into the right columns
+Tests$EndMonth <- if_else(is.na(Tests$EndMonth), Tests$Temp, Tests$EndMonth)
+Tests$EndMonth <- if_else(is.na(Tests$EndMonth), Tests$StartMonth, Tests$EndMonth)
+Tests$EndDay <- if_else(is.na(Tests$EndDay), Tests$RoD, Tests$EndDay)
+```
+Our data looks like this now: 
+![](https://github.com/TimHoare/CricinfoStuff/blob/master/cricinfogithubimg3.png)
+After all that all thats left to do is to paste the parts together and remove a few columns.
+
+```r
+#Combine date parts into 2 columns and remove parts
+Tests <- Tests %>%
+  mutate(StartDate = paste(StartDay, StartMonth, StartYear),
+         EndDate = paste(EndDay, EndMonth, EndYear)) %>%
+  select(StartDate, EndDate, HomeTeam, AwayTeam, Winner, Margin, Type, Ground, Scorecard)
+  
+#Parse dates using lubridate
+Tests$StartDate <- dmy(TempTest$StartDate)
+Tests$EndDate <- dmy(TempTest$EndDate)
+
+#Sense check
+Tests %>%
+  mutate(DateDiff = EndDate - StartDate + 1) %>% #Dates are inclusive so + 1 must be added
+  count(DateDiff, sort = TRUE)
+```
+The result of our sense check:
+
+![](https://github.com/TimHoare/CricinfoStuff/blob/master/cricinfogithubimg4.png)
+
+This seems pretty resonable given test matches typically don't go longer that 5 days. Matches that lasted 6, 7 and 8 days typically have one or more rest days in that period and are actually 5 or 6 day games. The matches spanning 9, 10 and 12 days are all 'timeless' test matches i.e. with no limitation on time although there rest days in these too - you can read about the 12 day match [here](http://www.espncricinfo.com/magazine/content/story/393923.html).
+
+Finally, we save our processed data as TestsProcessed and write a csv.
+
+```r
+TestsProcessed <- Tests
+
+write_csv(TestsProcessed, "TestsProcessed.csv")
+```
+ 
+
+
+
   
   
   
