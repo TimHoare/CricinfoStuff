@@ -181,6 +181,10 @@ Tests %>%
   mutate(DateDiff = EndDate - StartDate + 1) %>% #Dates are inclusive so + 1 must be added
   count(DateDiff, sort = TRUE)
 ```
+Our tidied data frame: 
+
+![](https://github.com/TimHoare/CricinfoStuff/blob/master/cricinfogithubimg5.png)
+
 The result of our sense check:
 
 ![](https://github.com/TimHoare/CricinfoStuff/blob/master/cricinfogithubimg4.png)
